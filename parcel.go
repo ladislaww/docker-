@@ -88,9 +88,19 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 }
 
 func (s ParcelStore) Delete(number int) error {
-	_, err := s.db.Exec("DELETE FROM parcel WHERE number = :number AND status = :status",
+	// Попробуем получить запись сначала
+	p, err := s.Get(number)
+	if err != nil {
+		return err
+	}
+
+	// Удаляем только если статус registered
+	if p.Status != ParcelStatusRegistered {
+		return sql.ErrNoRows
+	}
+
+	_, err = s.db.Exec("DELETE FROM parcel WHERE number = :number AND status = :status",
 		sql.Named("number", number),
 		sql.Named("status", ParcelStatusRegistered))
-
 	return err
 }

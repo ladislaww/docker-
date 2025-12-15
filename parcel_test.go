@@ -32,32 +32,35 @@ func getTestParcel() Parcel {
 func TestAddGetDelete(t *testing.T) {
 	// prepare
 	db, err := sql.Open("sqlite", "tracker.db")
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 	defer db.Close()
 	store := NewParcelStore(db)
 	parcel := getTestParcel()
 
 	// add
 	parcel.Number, err = store.Add(parcel)
-
 	require.NoError(t, err)
 	require.NotEmpty(t, parcel.Number)
 
 	// get
 	stored, err := store.Get(parcel.Number)
-
 	require.NoError(t, err)
 	require.Equal(t, parcel, stored)
 
 	// delete
 	err = store.Delete(parcel.Number)
 
-	stored, err = store.Get(parcel.Number)
-	require.Equal(t, sql.ErrNoRows, err)
+	// Проверяем, статус посылки
+	stored, getErr := store.Get(parcel.Number)
+	if parcel.Status == ParcelStatusRegistered {
+		// Если статус был registered, запись должна быть удалена
+		require.Equal(t, sql.ErrNoRows, getErr)
+	} else {
+		// Если статус не registered, запись остаётся
+		require.NoError(t, getErr)
+		require.Equal(t, parcel.Number, stored.Number)
+	}
 }
-
 // TestSetAddress проверяет обновление адреса
 func TestSetAddress(t *testing.T) {
 	// prepare
